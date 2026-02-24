@@ -7,9 +7,9 @@ export async function GET(request: NextRequest) {
     const year = searchParams.get('year') || ''
 
     const yearFilter = year && year !== '0'
-      ? 'WHERE EXTRACT(YEAR FROM d.issue_date) = $1'
-      : ''
-    const params = yearFilter ? [parseInt(year, 10)] : []
+      ? "WHERE d.decision_type = 'Β.2.2' AND EXTRACT(YEAR FROM d.issue_date) = $1"
+      : "WHERE d.decision_type = 'Β.2.2'"
+    const params = year && year !== '0' ? [parseInt(year, 10)] : []
 
     const signers = await query<{
       signer_id: string
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
          COALESCE(SUM(e.amount), 0)::numeric AS total_amount
        FROM decisions d
        JOIN signers s ON s.id = ANY(d.signer_ids)
-       LEFT JOIN expenses e ON e.decision_id = d.id
+       LEFT JOIN expenses e ON e.decision_id = d.id AND e.decision_type = 'Β.2.2'
        ${yearFilter}
        GROUP BY s.id, s.first_name, s.last_name, s.position
        ORDER BY decision_count DESC`,
