@@ -18,15 +18,15 @@ export async function GET(request: NextRequest) {
 
     // Single beneficiary detail mode
     if (afm) {
-      // Query expenses table directly (works even if materialized view is stale)
+      // Stats from payments only (Β.2.2) to avoid double-counting
       const info = await queryOne<TopBeneficiary>(
         `SELECT beneficiary_afm, beneficiary_name,
-                COUNT(*)::integer AS contract_count,
+                COUNT(DISTINCT ada)::integer AS contract_count,
                 SUM(amount)::numeric AS total_amount,
                 MIN(issue_date) AS first_seen,
                 MAX(issue_date) AS last_seen
          FROM expenses
-         WHERE beneficiary_afm = $1
+         WHERE beneficiary_afm = $1 AND decision_type = 'Β.2.2'
          GROUP BY beneficiary_afm, beneficiary_name`,
         [afm]
       )
@@ -80,12 +80,12 @@ export async function GET(request: NextRequest) {
     const beneficiaryCTE = `
       WITH beneficiary_stats AS (
         SELECT beneficiary_afm, beneficiary_name,
-               COUNT(*)::integer AS contract_count,
+               COUNT(DISTINCT ada)::integer AS contract_count,
                SUM(amount)::numeric AS total_amount,
                MIN(issue_date) AS first_seen,
                MAX(issue_date) AS last_seen
         FROM expenses
-        WHERE beneficiary_afm IS NOT NULL
+        WHERE beneficiary_afm IS NOT NULL AND decision_type = 'Β.2.2'
         GROUP BY beneficiary_afm, beneficiary_name
       )`
 
